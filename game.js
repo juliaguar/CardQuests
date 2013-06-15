@@ -327,7 +327,11 @@ var Game = function(players) {
 
 
 $(document).ready(function(){
-    var player1 = new Player('Julia');
-    var player2 = new Player('Finn');
-    var game = new Game([player1, player2]);
+    var names = prompt("What are the names of the players (separated by space)?");
+    names = names.split(" ");
+    var players = [];
+    for (var i = 0; i < names.length; i++) {
+        players.push(new Player(names[i]));
+    }
+    var game = new Game(players);
 });
