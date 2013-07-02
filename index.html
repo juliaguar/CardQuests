@@ -1,25 +1,265 @@
-<!DOCTYPE html>
 <html>
-  <head>
-    <script src="http://code.jquery.com/jquery-latest.min.js"></script>
-    <script src="game.js" ></script>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="shortcut icon" href="/favicon.ico">
-  </head>
+<body>
 
-  <body>
 
-    <h1> Math Phase Game </h1>
+<script src="raphael-min.js"></script>
+<div id="cardtable"></div>
+<h2 id="phase-number">-</h2>
+<div id="phase-description">-</div>
 
-    <h2> current player: </h2>    
-    <div id="player"> </div>
+<script>
 
-    <h2> your hand </h2> 
-    <ol start="0" id="hand"></ol>
 
-    <h2> Phase you are in: </h2>
-    <div id="phaseNumber"></div>
-    <div id="phaseDescription"></div>
+var paper = Raphael(document.getElementById("cardtable"), 1200, 600);
 
-  </body>
+
+var cardWidth = 150;
+var cardHeight = 200;
+
+var discardedCardsX = 260;
+var discardedCardsY = 300;
+
+var setPhaseLabel = function(number, description) {
+	document.getElementById("phase-number").innerHTML = "Phase " + number;
+	document.getElementById("phase-description").innerHTML = description;
+}
+
+
+var Deck = function() {
+
+	var cardX = 20, cardY = 200;
+
+	var blankCard = paper.rect(cardX, cardY, cardWidth, cardHeight, 20);
+	blankCard.attr({
+		fill: "0-#fff-#f00:20-#000",
+	});
+
+	this.setAction = function(action) {
+		blankCard.click(action);
+	}
+};
+
+var DropArea = function() {
+	var cardBorder = 10;
+
+	var area = paper.rect(discardedCardsX - cardBorder - cardWidth / 2, 
+		discardedCardsY - cardBorder - cardHeight / 2, 
+		cardWidth + cardBorder * 2, 
+		cardHeight + cardBorder * 2,
+		20);
+	area.attr({
+		"stroke-dasharray": "--",
+		"fill": "grey"
+	});
+
+	
+};
+
+var CardView = function(color, number, cardX, cardY) {
+
+
+	this.moveBack = false;
+	var _this = this;
+
+	var card = paper.set(); 
+
+	var blankCard = paper.rect(cardX, cardY, cardWidth, cardHeight, 20);
+	blankCard.attr({
+		fill: color,
+	});
+
+	var middleX = cardX + (cardWidth / 2);
+	var middleY = cardY + (cardHeight / 2);
+
+	var numberLabel = paper.text(middleX, middleY, number);
+	numberLabel.attr({
+		"font-size": 70,
+		"fill": "white"
+	})
+
+	card.push(blankCard, numberLabel);
+
+	// default is hidden
+
+	card.hide();
+
+	// Make removable, hideable, showable..
+
+	this.remove = function() {
+		card.remove();
+	}
+
+	this.hide = function() {
+		card.hide();
+	}
+
+	this.show = function() {
+		card.show();
+	}
+
+	this.setAction = function(action) {
+		card.mousedown(action);
+	}
+
+	this.removeAction = function() {
+		card.unlick();
+	}
+
+	this.discardCard = function() {
+		this.moveBack = true;
+		oneElement = card.pop();
+		var dx = discardedCardsX - oneElement.attr('x') ;
+		var dy = discardedCardsY - oneElement.attr('y');
+		card.push(oneElement);
+		card.forEach(function(element) {
+				element.attr('x', element.attr('x') + dx);
+				element.attr('y', element.attr('y') + dy);
+		});
+	}
+
+	this.retake = function() {
+		this.moveBack = false;
+	}
+
+
+
+	// Make dragabe cards
+
+	var dragging;
+
+	card.drag(function(dx, dy, x, y) {
+
+			card.forEach(function(element) {
+				element.attr('x', element.data('originX') + dx);
+				element.attr('y', element.data('originY') + dy);
+
+			});
+			
+
+	}, function(x, y) {
+			card.toFront();
+
+			dragging = true;
+
+			if(hoverGlow) hoverGlow.remove();
+
+			card.forEach(function(element) {
+				element.data('originX', element.attr('x'));
+				element.data('originY' , element.attr('y'));
+			});
+
+	}, function() {
+		dragging = false;
+
+		if(_this.moveBack) {
+			console.log("move back");
+			card.forEach(function(element) {
+				element.attr('x', element.data('originX'));
+				element.attr('y', element.data('originY'));
+			});
+		}
+	});
+
+
+	var hoverGlow;
+
+	card.mouseover(function() {
+		//this.attr("fill", "white");
+		if(!dragging) {
+			hoverGlow = blankCard.glow({
+				color: "yellow",
+				width: 15
+			});
+		}
+	});
+
+	card.mouseout(function() {
+		if(hoverGlow) {
+			hoverGlow.remove();
+		}
+	});
+}
+
+var Button = function(text, id, action) {
+
+
+	var button = paper.add([
+    {
+        type: "rect",
+        x: 20,
+        y: 20 + id * 60,
+        width: 100,
+        height: 50,
+        r: 10,
+        fill: "#ccc"
+    },
+    {
+        type: "text",
+        x: 70,
+        y: id * 60 + 45,
+        text: text,
+        'font-size': 20
+    }
+	]);
+
+
+	button.click(function() {
+		console.log(action);
+		action();
+	});
+
+	this.hide = function() {
+		return button.hide;
+	}
+
+	this.show = function() {
+		return button.show;
+	}
+};
+
+var PlayerList = function(players) {
+
+	var playerList = paper.set();
+
+	var playerLabel = [];
+
+	var title = paper.text(130, 20, "Players");
+	title.attr({
+		"font-size": 20,
+		"text-anchor": "start",
+		"font-weight": "bold"
+	});
+
+	for(var i = 0; i < players.length; i++) {
+
+		playerLabel[i] = paper.text(140, i * 40 + 60, players[i].name)
+		playerLabel[i].attr({
+			"font-size": 20,
+			"text-anchor": "start"
+		});
+		playerList.push(playerLabel[i]);
+	}
+
+	this.highlightPlayer = function(playerID) {
+
+		playerList.forEach(function(player) {
+			player.attr({
+				fill: "black"
+			})
+		});
+
+		playerLabel[playerID].attr({
+			fill: "red"
+		});
+	};
+
+};
+
+
+</script>
+
+<script src="game.js"></script>
+
+
+</body>
 </html>

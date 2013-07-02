@@ -2,14 +2,32 @@
 var suits = ["yellow", "red", "blue", "green"]; // cool colors?
 var numbers = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]; // Is this nececarry?
 
-var Card = function(suit, number) {
-    this.suit = suit;
-    this.number = number;
-    this.create = function () {
-        var suit = suits[Math.floor(Math.random()*suits.length)]; //selects a random suit
-        var number = numbers[Math.floor(Math.random()*numbers.length)]; //asings a random number
-        return new Card(suit, number);
-    }; 
+var Card = function(suit, number, discardCard) {
+    if(suit && number) {
+        this.suit = suit;
+        this.number = number;
+    } else {
+        this.suit = suits[Math.floor(Math.random()*suits.length)]; //selects a random suit
+        this.number = numbers[Math.floor(Math.random()*numbers.length)]; //asings a random number
+    }
+
+    this.cardView = new CardView(this.suit, this.number, 400, 140);
+    if(discardCard) {
+        this.cardView.show();
+        this.cardView.discardCard();
+    }
+
+    this.remove = function() {
+        this.cardView.remove();
+    }
+
+    this.show= function() {
+        this.cardView.show();
+    }
+    this.hide = function() {
+        this.cardView.hide();
+    }
+
     this.combine = function(card) {
         // Maybe this should be a method of the deck instead
         if(this.suit === card.suit) {
@@ -27,10 +45,10 @@ var Card = function(suit, number) {
 var phases = [];
 
 phases[0] = {
-    description: "7 Cards with same suit",
+    description: "5 Cards with same suit",
     checkCards: function(cards) {
         // Takes the cards selected for dropping
-        if(cards.length < 7) return false;
+        if(cards.length < 5) return false;
         var suit = cards[0].suit;
         for(var i = 0; i < cards.length; i++) {
             if(cards[i].suit !== suit) {
@@ -38,6 +56,13 @@ phases[0] = {
             }
         }
         return true;
+    }
+}
+
+phases[1] = {
+    description: "1 Card with the number of 42",
+    checkCards: function(cards) {
+        return cards[0].number === 42;
     }
 }
 
@@ -72,6 +97,7 @@ var Hand = function(table, player) {
         var selectedCards = this.positionsToCards(cardspos);
         if( phases[this.player.phase].checkCards(selectedCards) ) {
             for(var i = 0; i < cardspos.length; i++) {
+                this.cards[ cardspos[i] ].remove();
                 this.cards[ cardspos[i] ] = undefined; // droping the cards
             }
             this.phaseFinished = true;
@@ -83,25 +109,47 @@ var Hand = function(table, player) {
         }
     };
 
+    this.showHand = function() {
+        for(var i = 0; i < this.cards.length; i++) {
+            this.cards[i].show();
+        }
+    }
+
+    this.hideHand = function() {
+        for(var i = 0; i < this.cards.length; i++) {
+            this.cards[i].hide();
+        }
+    }
+
+    this.removeHand = function() {
+        for(var i = 0; i < this.cards.length; i++) {
+            this.cards[i].remove();
+        }
+    }
+
     
-    this.drawNewCard = function () {
-        var card = (new Card()).create();
+    this.drawNewCard = function (visible) {
+        var card = new Card();
         this.cards.push(card);
-        return card; 
+        if(visible) card.show();
+        return card;
     };
     
     // For the new hand
     for(var i = 0; i < 10; i++) {
-        this.drawNewCard();
+        this.drawNewCard(false);
     }
     
     this.drawDiscardedCard = function () {
-        if (this.table.discardedCards.length <= 0 ){
-            return false
-        } else {
-            var card = this.table.discardedCards.pop();
-            this.cards.push(card);
-            return card;
+        if(this.cards.length <= 10) {
+            if (this.table.discardedCards.length <= 0 ){
+                return false
+            } else {
+                var card = this.table.discardedCards.pop();
+                card.cardView.retake();
+                this.cards.push(card);
+                return card;
+            }
         }
             
     };
@@ -112,8 +160,11 @@ var Hand = function(table, player) {
         var newCard = card1.combine(card2);
         // only combine if same suit
         if(newCard) {
-            card2 = undefined;
-            card1 = newCard;
+            this.cards[ cardspos[1] ].remove();
+            this.cards[ cardspos[0] ].remove();
+            this.cards[ cardspos[1] ] = undefined;
+            this.cards[ cardspos[0] ] = newCard;
+            alert("Your new card is " + newCard);
             this.cleanHand();
             return card1;
         } else {
@@ -124,8 +175,12 @@ var Hand = function(table, player) {
     this.dropCard = function(pos) {
         // last move, drops a card on the discarded cards stack
         this.table.discardedCards.push(this.cards[pos]);
+        //this.cards[pos].hide();
+        this.cards[pos].cardView.discardCard();
+        var oldCard = this.cards[pos];
         this.cards[pos] = undefined;
         this.cleanHand(); 
+        return oldCard;
     };
     
     this.toString = function() {
@@ -173,7 +228,7 @@ var CardChain = function(cards, phase) {
 var Table = function () {
     this.cardChains = []; // Arrays of sets of cards
     
-    this.discardedCards = [(new Card()).create()];
+    this.discardedCards = [];
     
     this.lastDiscardedCard = function() {
         return this.discardedCards[this.discardedCards.length - 1];
@@ -199,7 +254,10 @@ var Game = function(players) {
     this.players = players;
     this.table;
     this.currentPlayerID;
-    
+
+    var _this = this;
+
+
     this.getCurrentPlayer = function() {
         return this.players[this.currentPlayerID];
     };
@@ -208,97 +266,112 @@ var Game = function(players) {
         this.currentPlayerID++;
         this.currentPlayerID %= this.players.length;
     };
-    
-    this.nextTurn = function () {
-        
-        //jquery rendering to show hand, the current player, the phase number and phase description
-        $('#hand').html(""); 
-        $('#player').text( this.getCurrentPlayer() );
 
-        for (var i = 0; i < this.getCurrentPlayer().hand.cards.length; i++ ) {
-            $('#hand').append("<li>" + this.getCurrentPlayer().hand.cards[i] + "</li>");
-        }
-
-        $('#phaseNumber').text(this.getCurrentPlayer().phase);
-        $('#phaseDescription').text(phases[this.getCurrentPlayer().phase].description);
-        
-
-        // First: Drawing a card
-        
-        var input = false;
-        var newOrOld = "";
-        var newCard;
-        while (!input) {
-            newOrOld = prompt("Do you want a new card or the last card (" + this.table.lastDiscardedCard() + ")" );
-            if (newOrOld === 'new') {
-                newCard = this.getCurrentPlayer().hand.drawNewCard();
-                input = true;
-            } else if (newOrOld === 'last') {
-                // If there is no discarded cards, input is false
-                input = this.getCurrentPlayer().hand.drawDiscardedCard();
-                newCard = input; 
-            } 
-        }
-
-        // update displayed hand
-        $('#hand').append('<li>' + newCard + '</li>');
-        
-        // Second: If not finished yet, give possibility to finish phase
-        
-        input = false;
-        if (!this.getCurrentPlayer().hand.phaseFinished) {
-            while(!input) {
-                var finishPhase = prompt('Do you want to finish phase?');
-                if (finishPhase === "yes") {
-                    var cardsPositions = prompt('Please enter the cards positions you want to put on the table separated by spaces starting with 0 (from left to right)');
+    this.finishPhase = function() {
+        if (!_this.getCurrentPlayer().hand.phaseFinished) {
+                    var cardsPositions = prompt('Please enter the cards positions you want to put on the table separated by spaces starting with 0 (from left to right): '+ _this.getCurrentPlayer().hand)
                     cardsPositions = cardsPositions.split(" ");
                     // TODO Check user input, if we want to continue having it text based
-                    input = this.getCurrentPlayer().hand.finishPhase(cardsPositions);
+                    input = _this.getCurrentPlayer().hand.finishPhase(cardsPositions);
                     if(input) {
-                        alert("You have finished phase " + (this.getCurrentPlayer().phase - 1));
+                        alert("You have finished phase " + _this.getCurrentPlayer().phase);
                         var newRound = prompt("Are you ready for a new round?")
                         if (newRound === "yes") {
-                            this.newRound();
-                        } else {
-                            return;
+                            _this.newRound();
                         }
                     } else {
                         alert("This way you can not finish the phase!");
                     }
-                } else if (finishPhase === "no") {
-                    alert("ok.");
-                    input = true; 
                 }
-            }
+    };
+
+    this.dropCard = function() {
+        var posCard = prompt("Enter position of card you want to drop: " + _this.getCurrentPlayer().hand);
+        var card = _this.getCurrentPlayer().hand.dropCard(posCard);
+        card.cardView.setAction(_this.takeDiscardedCard);
+        // Next player
+        _this.nextTurn(); //Continue :)
+    }
+
+    this.combineCards = function() {
+        var selectCards = prompt("Please enter the cards positions you want to combine separated by spaces starting with 0 (from left to right): " + _this.getCurrentPlayer().hand);
+        selectCards = selectCards.split(" ");
+        if (selectCards.length === 2){
+            input = _this.getCurrentPlayer().hand.combineCards(selectCards);
         } else {
-            // Third: Possibilty to drop further cards
-            
-            // TODO: Droping further cards to the cards on the table
+            alert('Wrong number of cards.');
+        }  
+        // Next player
+        _this.nextTurn(); //Continue :)
+    }
+
+    this.newCard = function() {
+        if(_this.getCurrentPlayer().hand.cards.length <= 10) {
+            _this.getCurrentPlayer().hand.drawNewCard(true);
         }
+    };
+
+    this.takeDiscardedCard = function() {
+        _this.getCurrentPlayer().hand.drawDiscardedCard();
+    }
+    
+    this.nextTurn = function () {
+
+        if(_this.table.discardedCards.length < 1) {
+            var newCard = new Card(false, false, true);
+            newCard.cardView.setAction(_this.takeDiscardedCard);
+            _this.table.discardedCards.push(newCard);
+        }
+        
+
+        _this.getCurrentPlayer().hand.hideHand();
+        _this.nextPlayer(); // This means right now the second player starts ;)
+
+        // view, highlight current player
+        console.log(this.playersLabel);
+        playersLabel.highlightPlayer(this.currentPlayerID);
+        
+        // show phase and description
+        setPhaseLabel(this.getCurrentPlayer().phase, phases[this.getCurrentPlayer().phase].description);
+
+        this.getCurrentPlayer().hand.showHand();
+        
+        // RAPHAEL TESTING :D
+
+        // var thecards = this.getCurrentPlayer().hand.cards;
+        // for(var i = 0; i < thecards.length; i++){
+        //     new CardView(thecards[i].suit, thecards[i].number, 110 * i, 330);
+        // }
+
+
+
+        // First: Drawing a card
+        
+        // var input = false;
+        // var newOrOld = "";
+
+        // var newCard;
+        // while (!input) {
+        //     newOrOld = prompt("Do you want a new card or the last card (" + this.table.lastDiscardedCard() + ")" );
+        //     if (newOrOld === 'new') {
+        //         newCard = this.getCurrentPlayer().hand.drawNewCard(true);
+        //         input = true;
+        //     } else if (newOrOld === 'last') {
+        //         // If there is no discarded cards, input is false
+        //         newCard = this.getCurrentPlayer().hand.drawDiscardedCard();
+        //         input = newCard;
+        //     } 
+        // }
+
+        //new CardView(newCard.suit, newCard.number, 10, 140);
+        
+        // Second: If not finished yet, give possibility to finish phase
+        
+
         
         // Fourth: Drop cards or combine cards
         
-        input = false;
-        while(!input) {
-            var dropOrCombine = prompt("Do you want to drop [1] a card or combine two cards [2]?");
-            if (dropOrCombine === "1") {
-                var posCard = prompt("Enter position of card you want to drop: " + this.getCurrentPlayer().hand);
-                this.getCurrentPlayer().hand.dropCard(posCard);
-                input = true; 
-            } else if (dropOrCombine === "2") {
-                var selectCards = prompt("Please enter the cards positions you want to combine separated by spaces starting with 0 (from left to right): " + this.getCurrentPlayer().hand);
-                selectCards = selectCards.split(" ");
-                if (selectCards.length === 2){
-                    this.getCurrentPlayer().hand.combineCards(selectCards);
-                    input = true; 
-                } else {
-                    alert('Wrong number of cards.');
-                }        
-            }
-        }
-        
-        this.nextPlayer();
-        this.nextTurn(); //Continue :)
+
         
     };
     
@@ -308,6 +381,7 @@ var Game = function(players) {
         
         // Initialize players hands and phases
         for(var i = 0; i < players.length; i++) {
+            if(this.players[i].hand) this.players[i].hand.removeHand();
             this.players[i].hand = new Hand(this.table, this.players[i]);
         }
         this.currentPlayerID = 0;
@@ -315,8 +389,25 @@ var Game = function(players) {
         // First turn
         this.nextTurn();
     };
+
+    // Drawing the players List
+    var playersLabel = new PlayerList(this.players);
+
+    var deck = new Deck();
+    deck.setAction(this.newCard);
+
+    var droparea = new DropArea();
     
+
+    // Drawing of buttons
+    console.log(this.endTurn);
+    var dropCardButton = new Button("drop card", 0, this.dropCard);
+    var combineCardsButton = new Button("combine", 1, this.combineCards);
+    var endPhaseButton = new Button("end phase", 2, this.finishPhase);
+
+
     this.newRound(); // First round;
+    
     
     
     
@@ -326,12 +417,10 @@ var Game = function(players) {
 // Start the game
 
 
-$(document).ready(function(){
-    var names = prompt("What are the names of the players (separated by space)?");
-    names = names.split(" ");
-    var players = [];
-    for (var i = 0; i < names.length; i++) {
-        players.push(new Player(names[i]));
-    }
-    var game = new Game(players);
-});
+var player1 = new Player('Julia');
+
+var player2 = new Player('Finn');
+var game = new Game([player1, player2]);
+
+
+
