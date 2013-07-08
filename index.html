@@ -105,8 +105,10 @@ var CardView = function(color, number, cardX, cardY) {
 		card.unlick();
 	}
 
+	// drop card
 	this.discardCard = function() {
 		this.moveBack = true;
+		card.toFront();
 		oneElement = card.pop();
 		var dx = discardedCardsX - oneElement.attr('x') ;
 		var dy = discardedCardsY - oneElement.attr('y');
