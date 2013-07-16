@@ -174,13 +174,17 @@ var Hand = function(table, player) {
     
     this.dropCard = function(pos) {
         // last move, drops a card on the discarded cards stack
-        this.table.discardedCards.push(this.cards[pos]);
-        //this.cards[pos].hide();
-        this.cards[pos].cardView.discardCard();
-        var oldCard = this.cards[pos];
-        this.cards[pos] = undefined;
-        this.cleanHand(); 
-        return oldCard;
+        if(this.cards.length > 10) {
+            this.table.discardedCards.push(this.cards[pos]);
+            //this.cards[pos].hide();
+            this.cards[pos].cardView.discardCard();
+            var oldCard = this.cards[pos];
+            this.cards[pos] = undefined;
+            this.cleanHand(); 
+            return oldCard;
+        } else {
+            alert("You need to take a card first!");
+        }
     };
     
     this.toString = function() {
@@ -286,11 +290,15 @@ var Game = function(players) {
     };
 
     this.dropCard = function() {
-        var posCard = prompt("Enter position of card you want to drop: " + _this.getCurrentPlayer().hand);
-        var card = _this.getCurrentPlayer().hand.dropCard(posCard);
-        card.cardView.setAction(_this.takeDiscardedCard);
-        // Next player
-        _this.nextTurn(); //Continue :)
+        if(_this.getCurrentPlayer().hand.cards.length > 10) {
+            var posCard = prompt("Enter position of card you want to drop: " + _this.getCurrentPlayer().hand);
+            var card = _this.getCurrentPlayer().hand.dropCard(posCard);
+            card.cardView.setAction(_this.takeDiscardedCard);
+            // Next player
+            _this.nextTurn(); //Continue :)
+        } else {
+            alert('You need to take a card first! You now have only ' + _this.getCurrentPlayer().hand.cards.length + ' cards');
+        }
     }
 
     this.combineCards = function() {
