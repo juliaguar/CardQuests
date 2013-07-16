@@ -302,15 +302,19 @@ var Game = function(players) {
     }
 
     this.combineCards = function() {
-        var selectCards = prompt("Please enter the cards positions you want to combine separated by spaces starting with 0 (from left to right): " + _this.getCurrentPlayer().hand);
-        selectCards = selectCards.split(" ");
-        if (selectCards.length === 2){
-            input = _this.getCurrentPlayer().hand.combineCards(selectCards);
+        if(_this.getCurrentPlayer().hand.cards.length > 10) {
+            var selectCards = prompt("Please enter the cards positions you want to combine separated by spaces starting with 0 (from left to right): " + _this.getCurrentPlayer().hand);
+            selectCards = selectCards.split(" ");
+            if (selectCards.length === 2){
+                input = _this.getCurrentPlayer().hand.combineCards(selectCards);
+                // Next player
+                _this.nextTurn(); //Continue :)
+            } else {
+                alert('Wrong number of cards.');
+            }  
         } else {
-            alert('Wrong number of cards.');
-        }  
-        // Next player
-        _this.nextTurn(); //Continue :)
+            alert('You need to take a card first! You now have only ' + _this.getCurrentPlayer().hand.cards.length + ' cards');
+        }
     }
 
     this.newCard = function() {
