@@ -11,7 +11,10 @@ var Card = function(suit, number, discardCard) {
         this.number = numbers[Math.floor(Math.random()*numbers.length)]; //asings a random number
     }
 
-    this.cardView = new CardView(this.suit, this.number, 400, 140);
+    this.cardView = new CardView(this.suit, this.number, 
+        Math.floor(Math.random()*400) + 400, 
+        Math.floor(Math.random()*400)
+    );
     if(discardCard) {
         this.cardView.show();
         this.cardView.discardCard();
