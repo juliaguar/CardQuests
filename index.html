@@ -15,6 +15,7 @@ var paper = Raphael(document.getElementById("cardtable"), 1200, 600);
 
 var cardWidth = 150;
 var cardHeight = 200;
+var cardRadius = 50;
 
 var discardedCardsX = 260;
 var discardedCardsY = 300;
@@ -27,9 +28,9 @@ var setPhaseLabel = function(number, description) {
 
 var Deck = function() {
 
-	var cardX = 20, cardY = 200;
+	var cardX = 50, cardY = 270;
 
-	var blankCard = paper.rect(cardX, cardY, cardWidth, cardHeight, 20);
+	var blankCard = paper.circle(cardX, cardY, cardRadius);
 	blankCard.attr({
 		fill: "0-#fff-#f00:20-#000",
 	});
@@ -63,15 +64,12 @@ var CardView = function(color, number, cardX, cardY) {
 
 	var card = paper.set(); 
 
-	var blankCard = paper.rect(cardX, cardY, cardWidth, cardHeight, 20);
+	var blankCard = paper.circle(cardX, cardY, cardRadius);
 	blankCard.attr({
 		fill: color,
 	});
 
-	var middleX = cardX + (cardWidth / 2);
-	var middleY = cardY + (cardHeight / 2);
-
-	var numberLabel = paper.text(middleX, middleY, number);
+	var numberLabel = paper.text(cardX, cardY, number);
 	numberLabel.attr({
 		"font-size": 70,
 		"fill": "white"
@@ -84,6 +82,13 @@ var CardView = function(color, number, cardX, cardY) {
 	card.hide();
 
 	// Make removable, hideable, showable..
+
+	this.setPos = function(x,y) {
+		card.attr('x', x);
+		card.attr('y', y);
+		card.attr('cx', x);
+		card.attr('cy', y);
+	};
 
 	this.remove = function() {
 		card.remove();
@@ -109,14 +114,7 @@ var CardView = function(color, number, cardX, cardY) {
 	this.discardCard = function() {
 		this.moveBack = true;
 		card.toFront();
-		oneElement = card.pop();
-		var dx = discardedCardsX - oneElement.attr('x') ;
-		var dy = discardedCardsY - oneElement.attr('y');
-		card.push(oneElement);
-		card.forEach(function(element) {
-				element.attr('x', element.attr('x') + dx);
-				element.attr('y', element.attr('y') + dy);
-		});
+		_this.setPos(discardedCardsX, discardedCardsY);
 	}
 
 	this.retake = function() {
@@ -131,11 +129,13 @@ var CardView = function(color, number, cardX, cardY) {
 
 	card.drag(function(dx, dy, x, y) {
 
-			card.forEach(function(element) {
-				element.attr('x', element.data('originX') + dx);
-				element.attr('y', element.data('originY') + dy);
+			// card.forEach(function(element) {
+			// 	element.attr('x', element.data('originX') + dx);
+			// 	element.attr('y', element.data('originY') + dy);
 
-			});
+			// });
+
+			_this.setPos(x, y);
 			
 
 	}, function(x, y) {
@@ -145,20 +145,16 @@ var CardView = function(color, number, cardX, cardY) {
 
 			if(hoverGlow) hoverGlow.remove();
 
-			card.forEach(function(element) {
-				element.data('originX', element.attr('x'));
-				element.data('originY' , element.attr('y'));
-			});
+			_this.originX = card[0].attr('x');
+			_this.originY = card[0].attr('y');
+
 
 	}, function() {
 		dragging = false;
 
 		if(_this.moveBack) {
 			console.log("move back");
-			card.forEach(function(element) {
-				element.attr('x', element.data('originX'));
-				element.attr('y', element.data('originY'));
-			});
+			_this.setPos(_this.originX, _this.originY);
 		}
 	});
 
