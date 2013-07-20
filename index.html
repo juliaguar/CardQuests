@@ -17,8 +17,11 @@ var cardWidth = 150;
 var cardHeight = 200;
 var cardRadius = 50;
 
-var discardedCardsX = 260;
-var discardedCardsY = 300;
+var discardedCardsX = 70;
+var discardedCardsY = 400;
+
+var deckX = 70;
+var deckY = 270;
 
 var setPhaseLabel = function(number, description) {
 	document.getElementById("phase-number").innerHTML = "Phase " + number;
@@ -28,9 +31,7 @@ var setPhaseLabel = function(number, description) {
 
 var Deck = function() {
 
-	var cardX = 50, cardY = 270;
-
-	var blankCard = paper.circle(cardX, cardY, cardRadius);
+	var blankCard = paper.circle(deckX, deckY, cardRadius);
 	blankCard.attr({
 		fill: "0-#fff-#f00:20-#000",
 	});
