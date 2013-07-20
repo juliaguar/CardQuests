@@ -23,6 +23,13 @@ var discardedCardsY = 400;
 var deckX = 70;
 var deckY = 270;
 
+var samePosition = function(x1, y1, x2, y2, prec) {
+	return x1 > (x2 - prec) 
+		&& x1 < (x2 + prec)
+		&& y1 > (y2 - prec)
+		&& y1 < (y2 + prec)
+};
+
 var setPhaseLabel = function(number, description) {
 	document.getElementById("phase-number").innerHTML = "Phase " + number;
 	document.getElementById("phase-description").innerHTML = description;
@@ -53,20 +60,24 @@ var DropArea = function() {
 	
 };
 
-var CardView = function(color, number, cardX, cardY) {
+var CardView = function(model, cardX, cardY) {
 
 
 	this.moveBack = false;
+	this.model = model;
 	var _this = this;
 
 	var card = paper.set(); 
 
-	var blankCard = paper.circle(cardX, cardY, cardRadius);
+	this.x = cardX;
+	this.y = cardY;
+
+	var blankCard = paper.circle(this.x, this.y, cardRadius);
 	blankCard.attr({
-		fill: color,
+		fill: _this.model.suit,
 	});
 
-	var numberLabel = paper.text(cardX, cardY, number);
+	var numberLabel = paper.text(this.x, this.y, this.model.number);
 	numberLabel.attr({
 		"font-size": 70,
 		"fill": "white"
@@ -85,7 +96,10 @@ var CardView = function(color, number, cardX, cardY) {
 		card.attr('y', y);
 		card.attr('cx', x);
 		card.attr('cy', y);
+		_this.x = x;
+		_this.y = y;
 	};
+
 
 	this.remove = function() {
 		card.remove();
@@ -133,6 +147,10 @@ var CardView = function(color, number, cardX, cardY) {
 			// });
 
 			_this.setPos(x, y);
+
+			if(samePosition(x, y, discardedCardsX, discardedCardsY, 10)) {
+				console.log("On stack.")
+			}
 			
 
 	}, function(x, y) {
@@ -142,16 +160,24 @@ var CardView = function(color, number, cardX, cardY) {
 
 			if(hoverGlow) hoverGlow.remove();
 
-			_this.originX = card[0].attr('x');
-			_this.originY = card[0].attr('y');
+			_this.originX = _this.x;
+			_this.originY = _this.y;
 
-
-	}, function() {
+	}, function(e) {
 		dragging = false;
 
 		if(_this.moveBack) {
 			console.log("move back");
 			_this.setPos(_this.originX, _this.originY);
+		} else {
+			if(samePosition(e.x, e.y, discardedCardsX, discardedCardsY, 10)) {
+				if (_this.model.hand.dropCard(_this.model.positionHand)) {
+					console.log("Dropped card");
+				} else {
+					console.log("Nope!");
+					_this.setPos(_this.originX, _this.originY);
+				}
+			}
 		}
 	});
 

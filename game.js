@@ -2,7 +2,11 @@
 var suits = ["yellow", "red", "blue", "green"]; // cool colors?
 var numbers = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]; // Is this nececarry?
 
+// Card model
 var Card = function(suit, number, discardCard) {
+
+    this.positionHand = -1;
+
     if(suit && number) {
         this.suit = suit;
         this.number = number;
@@ -11,7 +15,7 @@ var Card = function(suit, number, discardCard) {
         this.number = numbers[Math.floor(Math.random()*numbers.length)]; //asings a random number
     }
 
-    this.cardView = new CardView(this.suit, this.number, 
+    this.cardView = new CardView(this, 
         Math.floor(Math.random()*400) + 400, 
         Math.floor(Math.random()*400)
     );
@@ -34,7 +38,9 @@ var Card = function(suit, number, discardCard) {
     this.combine = function(card) {
         // Maybe this should be a method of the deck instead
         if(this.suit === card.suit) {
-            return new Card(this.suit, this.number + card.number);
+            var combined = new Card(this.suit, this.number + card.number);
+            combined.hand = this.hand;
+            return combined;
         } else {
             return false;
         }
@@ -70,6 +76,8 @@ phases[1] = {
 }
 
 var Hand = function(table, player) {
+
+    var _this = this;
     this.cards = [];
     this.player = player;
     this.table = table;
@@ -78,9 +86,12 @@ var Hand = function(table, player) {
     this.cleanHand = function() {
         // Needs to be called at the end of the round
         var newArr = [];
+        var newPos = 0;
         for(var i = 0; i < this.cards.length; i++) {
             if(this.cards[i]) {
-                newArr.push(this.cards[i]);
+                newArr[newPos] = this.cards[i];
+                this.cards[i].positionHand = newPos;
+                newPos++;
             }
         }
         this.cards = newArr;
@@ -133,6 +144,8 @@ var Hand = function(table, player) {
     
     this.drawNewCard = function (visible) {
         var card = new Card();
+        card.hand = _this;
+        card.positionHand = this.cards.length; // combine in function! (see drawdiscarded cards)
         this.cards.push(card);
         if(visible) card.show();
         return card;
@@ -150,7 +163,9 @@ var Hand = function(table, player) {
             } else {
                 var card = this.table.discardedCards.pop();
                 card.cardView.retake();
+                card.positionHand = this.cards.length;
                 this.cards.push(card);
+                card.hand = _this;
                 return card;
             }
         }
@@ -177,16 +192,19 @@ var Hand = function(table, player) {
     
     this.dropCard = function(pos) {
         // last move, drops a card on the discarded cards stack
+        console.log("Dropping card " + pos);
         if(this.cards.length > 10) {
             this.table.discardedCards.push(this.cards[pos]);
             //this.cards[pos].hide();
             this.cards[pos].cardView.discardCard();
             var oldCard = this.cards[pos];
             this.cards[pos] = undefined;
+            this.cards.hand = undefined;
+            this.cards.positionHand = undefined;
             this.cleanHand(); 
-            return oldCard;
+            return true;
         } else {
-            alert("You need to take a card first!");
+            return false;
         }
     };
     
