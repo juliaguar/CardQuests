@@ -148,6 +148,7 @@ var Hand = function(table, player) {
         card.positionHand = this.cards.length; // combine in function! (see drawdiscarded cards)
         this.cards.push(card);
         if(visible) card.show();
+        console.log(_this.cards.length);
         return card;
     };
     
@@ -156,20 +157,21 @@ var Hand = function(table, player) {
         this.drawNewCard(false);
     }
     
+
     this.drawDiscardedCard = function () {
-        if(this.cards.length <= 10) {
-            if (this.table.discardedCards.length <= 0 ){
+        if(_this.cards.length <= 10) {
+            if (_this.table.discardedCards.length <= 0 ){
                 return false
             } else {
-                var card = this.table.discardedCards.pop();
+                var card = _this.table.discardedCards.pop();
                 card.cardView.retake();
-                card.positionHand = this.cards.length;
-                this.cards.push(card);
+                card.positionHand = _this.cards.length;
+                _this.cards.push(card);
                 card.hand = _this;
+                console.log(_this.cards.length);
                 return card;
             }
         }
-            
     };
     
     this.combineCards = function(cardspos) {
@@ -192,19 +194,21 @@ var Hand = function(table, player) {
     
     this.dropCard = function(pos) {
         // last move, drops a card on the discarded cards stack
-        console.log("Dropping card " + pos);
+        console.log("Dropping card " + this.cards[pos]);
+        console.log(this.cards);
         if(this.cards.length > 10) {
             this.table.discardedCards.push(this.cards[pos]);
             //this.cards[pos].hide();
             this.cards[pos].cardView.discardCard();
             var oldCard = this.cards[pos];
-            oldCard.cardView.setAction(_this.takeDiscardedCard);
+            oldCard.cardView.setAction(_this.drawDiscardedCard);
             this.cards[pos] = undefined;
             this.cards.hand = undefined;
             this.cards.positionHand = undefined;
             this.cleanHand();
 
             game.nextTurn();
+            console.log(this.cards.length);
             return true;
         } else {
             return false;
@@ -336,9 +340,6 @@ var Game = function(players) {
         }
     };
 
-    this.takeDiscardedCard = function() {
-        _this.getCurrentPlayer().hand.drawDiscardedCard();
-    }
     
     this.nextTurn = function () {
 
