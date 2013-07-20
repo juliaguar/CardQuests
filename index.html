@@ -43,11 +43,7 @@ var Deck = function() {
 var DropArea = function() {
 	var cardBorder = 10;
 
-	var area = paper.rect(discardedCardsX - cardBorder - cardWidth / 2, 
-		discardedCardsY - cardBorder - cardHeight / 2, 
-		cardWidth + cardBorder * 2, 
-		cardHeight + cardBorder * 2,
-		20);
+	var area = paper.circle(discardedCardsX, discardedCardsY, cardRadius + 10);
 	area.attr({
 		"stroke-dasharray": "--",
 		"fill": "grey"
