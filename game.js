@@ -198,10 +198,13 @@ var Hand = function(table, player) {
             //this.cards[pos].hide();
             this.cards[pos].cardView.discardCard();
             var oldCard = this.cards[pos];
+            oldCard.cardView.setAction(_this.takeDiscardedCard);
             this.cards[pos] = undefined;
             this.cards.hand = undefined;
             this.cards.positionHand = undefined;
-            this.cleanHand(); 
+            this.cleanHand();
+
+            game.nextTurn();
             return true;
         } else {
             return false;
@@ -310,17 +313,6 @@ var Game = function(players) {
                 }
     };
 
-    this.dropCard = function() {
-        if(_this.getCurrentPlayer().hand.cards.length > 10) {
-            var posCard = prompt("Enter position of card you want to drop: " + _this.getCurrentPlayer().hand);
-            var card = _this.getCurrentPlayer().hand.dropCard(posCard);
-            card.cardView.setAction(_this.takeDiscardedCard);
-            // Next player
-            _this.nextTurn(); //Continue :)
-        } else {
-            alert('You need to take a card first! You now have only ' + _this.getCurrentPlayer().hand.cards.length + ' cards');
-        }
-    }
 
     this.combineCards = function() {
         if(_this.getCurrentPlayer().hand.cards.length > 10) {
@@ -434,7 +426,6 @@ var Game = function(players) {
 
     // Drawing of buttons
     console.log(this.endTurn);
-    var dropCardButton = new Button("drop card", 0, this.dropCard);
     var combineCardsButton = new Button("combine", 1, this.combineCards);
     var endPhaseButton = new Button("end phase", 2, this.finishPhase);
 
